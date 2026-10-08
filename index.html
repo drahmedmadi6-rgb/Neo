@@ -273,6 +273,335 @@
         </div>
     </div>
 
-    <script type="module" src="js/app.js"></script>
+    <!-- السكربت المدمج بالكامل ليعمل مباشرة بدون سيرفر -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+
+        // 1. Firebase Config
+        const firebaseConfig = {
+            apiKey: "AIzaSyDJ2PMemkLDrVWS2PMH9z7glG-yK0QDNsg",
+            authDomain: "friends-clinic.firebaseapp.com",
+            projectId: "friends-clinic",
+            storageBucket: "friends-clinic.firebasestorage.app",
+            messagingSenderId: "741063199735",
+            appId: "1:741063199735:web:d191a36a4c1900a38bbcf2",
+            measurementId: "G-CKMCE2QRHG"
+        };
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // 2. UI Functions
+        function showSection(sectionId) {
+            document.querySelectorAll('.page-section').forEach(sec => sec.classList.add('hidden'));
+            document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
+            document.getElementById(sectionId).classList.remove('hidden');
+            document.querySelector(`[data-target="${sectionId}"]`)?.classList.add('active');
+            const titleMap = {
+                'dashboardSection': 'لوحة التحكم',
+                'newAppointmentSection': 'تسجيل حجز جديد',
+                'todayAppointmentsSection': 'قائمة حجوزات اليوم',
+                'upcomingAppointmentsSection': 'المواعيد المستقبلية',
+                'searchPatientSection': 'البحث في السجلات الطبية'
+            };
+            document.getElementById('pageTitle').innerText = titleMap[sectionId];
+        }
+
+        function showLoading(text = "جاري المعالجة...") {
+            document.getElementById('loadingText').innerText = text;
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+        }
+
+        function showToast(message, type = "success") {
+            const toast = document.getElementById('toast');
+            toast.innerText = message;
+            toast.style.backgroundColor = type === "success" ? "var(--primary-color)" : "var(--status-cancelled)";
+            toast.classList.remove('hidden');
+            setTimeout(() => toast.classList.add('hidden'), 3000);
+        }
+
+        function renderBadge(status) {
+            let cssClass = "scheduled";
+            switch(status) {
+                case "Waiting": cssClass = "waiting"; break;
+                case "Scheduled": cssClass = "scheduled"; break;
+                case "In Consultation": cssClass = "consultation"; break;
+                case "Completed": cssClass = "completed"; break;
+                case "Cancelled": cssClass = "cancelled"; break;
+                case "No Show": cssClass = "noshow"; break;
+            }
+            return `<span class="badge ${cssClass}">${status}</span>`;
+        }
+
+        function getTodayStr() {
+            const d = new Date();
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        function getCurrentTimeStr() {
+            const d = new Date();
+            return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+        }
+
+        // 3. Database Functions
+        async function generateMRN() {
+            const counterRef = doc(db, "system_counters", "mrn_counter");
+            try {
+                return await runTransaction(db, async (transaction) => {
+                    const counterDoc = await transaction.get(counterRef);
+                    let currentVal = 1;
+                    if (!counterDoc.exists()) {
+                        transaction.set(counterRef, { lastValue: 1 });
+                    } else {
+                        currentVal = counterDoc.data().lastValue + 1;
+                        transaction.update(counterRef, { lastValue: currentVal });
+                    }
+                    return `NEO-${String(currentVal).padStart(6, '0')}`;
+                });
+            } catch (e) {
+                console.error(e); throw new Error("فشل إنشاء رقم طبي");
+            }
+        }
+
+        async function searchPatientByPhone(phone) {
+            const q = query(collection(db, "patients"), where("phone", "==", phone));
+            const snap = await getDocs(q);
+            return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
+        }
+
+        async function createPatient(data) {
+            const mrn = await generateMRN();
+            const dataToSave = { mrn, ...data, createdAt: serverTimestamp() };
+            const docRef = await addDoc(collection(db, "patients"), dataToSave);
+            return { id: docRef.id, mrn, ...dataToSave };
+        }
+
+        async function createAppointment(data) {
+            const dataToSave = { ...data, createdAt: serverTimestamp() };
+            const docRef = await addDoc(collection(db, "appointments"), dataToSave);
+            return { id: docRef.id, ...dataToSave };
+        }
+
+        async function getAppointmentsByDate(dateStr) {
+            const q = query(collection(db, "appointments"), where("date", "==", dateStr));
+            const snap = await getDocs(q);
+            let apps = [];
+            snap.forEach(doc => apps.push({ id: doc.id, ...doc.data() }));
+            return apps;
+        }
+
+        async function updateAppointmentStatus(id, status) {
+            await updateDoc(doc(db, "appointments", id), { status, updatedAt: serverTimestamp() });
+        }
+
+        async function getPatientById(id) {
+            const snap = await getDoc(doc(db, "patients", id));
+            return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+        }
+
+        async function getPatientHistory(patientId) {
+            const q = query(collection(db, "appointments"), where("patientId", "==", patientId));
+            const snap = await getDocs(q);
+            let history = [];
+            snap.forEach(doc => history.push({ id: doc.id, ...doc.data() }));
+            return history.sort((a, b) => new Date(b.date) - new Date(a.date));
+        }
+
+        async function globalPatientSearch(term) {
+            term = term.trim();
+            let q = term.startsWith("NEO-") ? query(collection(db, "patients"), where("mrn", "==", term)) :
+                    term.match(/^[0-9]+$/) ? query(collection(db, "patients"), where("phone", "==", term)) :
+                    query(collection(db, "patients"), where("fullName", "==", term));
+            const snap = await getDocs(q);
+            return snap.empty ? null : { id: snap.docs[0].id, ...snap.docs[0].data() };
+        }
+
+        // 4. Main App Logic
+        let currentFormPatient = null;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            document.querySelectorAll('.nav-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const target = e.currentTarget.getAttribute('data-target');
+                    showSection(target);
+                    if (target === 'dashboardSection') loadDashboard();
+                    if (target === 'todayAppointmentsSection') loadTodayAppointments();
+                    if (target === 'upcomingAppointmentsSection') document.getElementById('filterUpcomingDate').value = getTodayStr();
+                });
+            });
+
+            document.getElementById('btnCheckPhone').addEventListener('click', async () => {
+                const phone = document.getElementById('checkPhoneInput').value.trim();
+                if (!phone) { showToast("الرجاء إدخال رقم الهاتف", "error"); return; }
+                showLoading("جاري البحث...");
+                try {
+                    const patient = await searchPatientByPhone(phone);
+                    const resultDiv = document.getElementById('patientSearchResult');
+                    document.getElementById('appointmentFormContainer').classList.remove('hidden');
+                    resultDiv.classList.remove('hidden');
+
+                    if (patient) {
+                        currentFormPatient = patient;
+                        resultDiv.className = "alert info mt-10";
+                        resultDiv.innerHTML = `<strong>المريض موجود:</strong> رقم ${patient.mrn}`;
+                        document.getElementById('formTitle').innerText = "تأكيد بيانات المريض";
+                        document.getElementById('formFullName').value = patient.fullName;
+                        document.getElementById('formFullName').readOnly = true;
+                        document.getElementById('formPhone').value = patient.phone;
+                        document.getElementById('formGender').value = patient.gender;
+                        document.getElementById('formGender').disabled = true;
+                        document.getElementById('formDOB').value = patient.dob;
+                        document.getElementById('formDOB').readOnly = true;
+                    } else {
+                        currentFormPatient = null;
+                        resultDiv.className = "alert success mt-10";
+                        resultDiv.innerHTML = `<strong>مريض جديد:</strong> يرجى تعبئة البيانات`;
+                        document.getElementById('formTitle').innerText = "بيانات المريض الجديد";
+                        document.getElementById('newAppointmentForm').reset();
+                        document.getElementById('formPhone').value = phone;
+                        document.getElementById('formFullName').readOnly = false;
+                        document.getElementById('formGender').disabled = false;
+                        document.getElementById('formDOB').readOnly = false;
+                    }
+                } catch (error) { showToast("خطأ في البحث", "error"); }
+                hideLoading();
+            });
+
+            document.getElementsByName('appType').forEach(radio => {
+                radio.addEventListener('change', (e) => {
+                    const isScheduled = e.target.value === 'Scheduled';
+                    document.getElementById('futureDateTimeGroup').classList.toggle('hidden', !isScheduled);
+                    document.getElementById('futureTimeGroup').classList.toggle('hidden', !isScheduled);
+                });
+            });
+
+            document.getElementById('newAppointmentForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                showLoading("جاري الحفظ...");
+                try {
+                    let patientId, mrn;
+                    if (!currentFormPatient) {
+                        const newPat = await createPatient({
+                            fullName: document.getElementById('formFullName').value,
+                            gender: document.getElementById('formGender').value,
+                            dob: document.getElementById('formDOB').value,
+                            phone: document.getElementById('formPhone').value
+                        });
+                        patientId = newPat.id; mrn = newPat.mrn;
+                    } else {
+                        patientId = currentFormPatient.id; mrn = currentFormPatient.mrn;
+                    }
+
+                    const appType = document.querySelector('input[name="appType"]:checked').value;
+                    const appDate = appType === 'Now' ? getTodayStr() : document.getElementById('formAppDate').value;
+                    const appTime = appType === 'Now' ? getCurrentTimeStr() : document.getElementById('formAppTime').value;
+
+                    await createAppointment({
+                        patientId, mrn, 
+                        patientName: document.getElementById('formFullName').value,
+                        type: appType, date: appDate, time: appTime,
+                        status: appType === 'Now' ? "Waiting" : "Scheduled",
+                        complaint: document.getElementById('formComplaint').value,
+                        notes: document.getElementById('formNotes').value
+                    });
+
+                    showToast(`تم الحجز! الملف: ${mrn}`);
+                    document.getElementById('newAppointmentForm').reset();
+                    document.getElementById('appointmentFormContainer').classList.add('hidden');
+                    document.querySelector('[data-target="dashboardSection"]').click();
+                } catch (error) { showToast("خطأ في الحفظ", "error"); }
+                hideLoading();
+            });
+
+            async function loadTodayAppointments() {
+                showLoading();
+                const tbody = document.querySelector('#todayTable tbody');
+                tbody.innerHTML = '';
+                try {
+                    const apps = await getAppointmentsByDate(getTodayStr());
+                    apps.sort((a,b) => a.time.localeCompare(b.time)).forEach(app => {
+                        tbody.innerHTML += `<tr>
+                            <td><strong>${app.time}</strong></td>
+                            <td>${app.mrn}</td>
+                            <td>${app.patientName}</td>
+                            <td>${renderBadge(app.status)}</td>
+                            <td>
+                                <button class="btn-secondary btn-small" onclick="window.viewPatient('${app.patientId}')">ملف</button>
+                                <button class="btn-primary btn-small" onclick="window.openStatusModal('${app.id}', '${app.status}')">حالة</button>
+                            </td>
+                        </tr>`;
+                    });
+                } catch(e) {}
+                hideLoading();
+            }
+            document.getElementById('btnRefreshToday').addEventListener('click', loadTodayAppointments);
+
+            async function loadDashboard() {
+                try {
+                    const apps = await getAppointmentsByDate(getTodayStr());
+                    document.getElementById('dashTodayCount').innerText = apps.length;
+                    document.getElementById('dashWaitingCount').innerText = apps.filter(a => a.status === 'Waiting').length;
+                } catch(e) {}
+            }
+
+            document.getElementById('btnGlobalSearch').addEventListener('click', async () => {
+                const term = document.getElementById('globalSearchInput').value;
+                if(!term) return;
+                showLoading();
+                try {
+                    const patient = await globalPatientSearch(term);
+                    if(patient) window.viewPatient(patient.id);
+                    else showToast("لم يتم العثور على المريض", "error");
+                } catch(e) {}
+                hideLoading();
+            });
+
+            window.openStatusModal = (appId, currentStatus) => {
+                document.getElementById('statusAppId').value = appId;
+                document.getElementById('newStatusSelect').value = currentStatus;
+                document.getElementById('statusModal').classList.remove('hidden');
+            };
+
+            document.getElementById('statusForm').addEventListener('submit', async (e) => {
+                e.preventDefault();
+                showLoading();
+                try {
+                    await updateAppointmentStatus(document.getElementById('statusAppId').value, document.getElementById('newStatusSelect').value);
+                    showToast("تم تحديث الحالة");
+                    document.getElementById('statusModal').classList.add('hidden');
+                    loadTodayAppointments();
+                } catch(e) {}
+                hideLoading();
+            });
+
+            window.viewPatient = async (patientId) => {
+                showLoading();
+                try {
+                    const patient = await getPatientById(patientId);
+                    document.getElementById('modalPatientInfo').innerHTML = `
+                        <div class="profile-item"><span>الاسم</span><strong>${patient.fullName}</strong></div>
+                        <div class="profile-item"><span>MRN</span><strong>${patient.mrn}</strong></div>
+                        <div class="profile-item"><span>الهاتف</span><strong>${patient.phone}</strong></div>
+                        <div class="profile-item"><span>تاريخ الميلاد</span><strong>${patient.dob}</strong></div>
+                    `;
+                    const history = await getPatientHistory(patientId);
+                    const tbody = document.querySelector('#historyTable tbody');
+                    tbody.innerHTML = history.map(app => `<tr><td>${app.date}</td><td>${app.complaint || '-'}</td><td>${renderBadge(app.status)}</td></tr>`).join('');
+                    document.getElementById('patientModal').classList.remove('hidden');
+                } catch(e) {}
+                hideLoading();
+            };
+
+            document.getElementById('closePatientModal').addEventListener('click', () => document.getElementById('patientModal').classList.add('hidden'));
+            document.getElementById('closeStatusModal').addEventListener('click', () => document.getElementById('statusModal').classList.add('hidden'));
+
+            loadDashboard();
+        });
+    </script>
 </body>
 </html>
