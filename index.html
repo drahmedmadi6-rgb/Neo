@@ -293,10 +293,20 @@
 
         // 2. UI Functions
         function showSection(sectionId) {
-            document.querySelectorAll('.page-section').forEach(sec => sec.classList.add('hidden'));
+            // 1. إخفاء كل الأقسام
+            document.querySelectorAll('.page-section').forEach(sec => {
+                sec.classList.add('hidden');
+                sec.classList.remove('active'); // السطر ده كان ناقص عشان يقفل الصفحات التانية
+            });
             document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
-            document.getElementById(sectionId).classList.remove('hidden');
+            
+            // 2. إظهار القسم الجديد
+            const targetSection = document.getElementById(sectionId);
+            targetSection.classList.remove('hidden');
+            targetSection.classList.add('active'); // <--- السطر السحري اللي أنا نسيته وكان مخفي الشاشة!
+            
             document.querySelector(`[data-target="${sectionId}"]`)?.classList.add('active');
+            
             const titleMap = {
                 'dashboardSection': 'لوحة التحكم',
                 'newAppointmentSection': 'تسجيل حجز جديد',
@@ -306,6 +316,7 @@
             };
             document.getElementById('pageTitle').innerText = titleMap[sectionId];
         }
+
 
         function showLoading(text = "جاري المعالجة...") {
             document.getElementById('loadingText').innerText = text;
