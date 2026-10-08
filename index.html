@@ -5,24 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>NEO KIDS - Reception</title>
     <link rel="stylesheet" href="css/style.css">
-    <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- Google Fonts -->
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
 </head>
 <body>
-
-    <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay hidden">
         <div class="spinner"></div>
         <p id="loadingText">جاري التحميل...</p>
     </div>
 
-    <!-- Toast Notification -->
     <div id="toast" class="toast hidden"></div>
 
     <div class="app-container">
-        <!-- Sidebar -->
         <aside class="sidebar">
             <div class="brand">
                 <h1>NEO KIDS</h1>
@@ -38,9 +32,7 @@
             </nav>
         </aside>
 
-        <!-- Main Content -->
         <main class="main-content">
-            <!-- Header -->
             <header class="top-header">
                 <h2 id="pageTitle">لوحة التحكم</h2>
                 <div class="user-info">
@@ -51,7 +43,7 @@
 
             <div class="content-wrapper">
                 
-                <!-- 1. Dashboard Section -->
+                <!-- Dashboard Section -->
                 <section id="dashboardSection" class="page-section active">
                     <div class="stats-grid">
                         <div class="stat-card">
@@ -86,7 +78,7 @@
                     </div>
                 </section>
 
-                <!-- 2. New Appointment Section -->
+                <!-- New Appointment Section -->
                 <section id="newAppointmentSection" class="page-section hidden">
                     <div class="card">
                         <div class="card-header">
@@ -102,7 +94,6 @@
                         </div>
                     </div>
 
-                    <!-- Appointment Form (Hidden until phone is checked) -->
                     <div id="appointmentFormContainer" class="card hidden mt-20">
                         <div class="card-header">
                             <h3 id="formTitle">بيانات الحجز</h3>
@@ -112,7 +103,6 @@
                                 <input type="hidden" id="formPatientId">
                                 <input type="hidden" id="formPatientMRN">
                                 
-                                <!-- Patient Info Fields (Readonly if existing, editable if new) -->
                                 <div class="form-grid">
                                     <div class="form-group">
                                         <label>اسم الطفل</label>
@@ -138,7 +128,6 @@
 
                                 <hr class="divider">
 
-                                <!-- Appointment Details -->
                                 <div class="form-grid">
                                     <div class="form-group full-width">
                                         <label>نوع الحجز</label>
@@ -175,7 +164,7 @@
                     </div>
                 </section>
 
-                <!-- 3. Today's Appointments Section -->
+                <!-- Today's Appointments Section -->
                 <section id="todayAppointmentsSection" class="page-section hidden">
                     <div class="card">
                         <div class="card-header d-flex justify-between align-center">
@@ -193,15 +182,13 @@
                                         <th>الإجراءات</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <!-- Dynamic rows -->
-                                </tbody>
+                                <tbody></tbody>
                             </table>
                         </div>
                     </div>
                 </section>
 
-                <!-- 4. Upcoming Appointments Section -->
+                <!-- Upcoming Appointments Section -->
                 <section id="upcomingAppointmentsSection" class="page-section hidden">
                     <div class="card">
                         <div class="card-header d-flex justify-between align-center">
@@ -220,15 +207,13 @@
                                         <th>الإجراءات</th>
                                     </tr>
                                 </thead>
-                                <tbody>
-                                    <!-- Dynamic rows -->
-                                </tbody>
+                                <tbody></tbody>
                             </table>
                         </div>
                     </div>
                 </section>
 
-                <!-- 5. Search Patient Section -->
+                <!-- Search Patient Section -->
                 <section id="searchPatientSection" class="page-section hidden">
                     <div class="card">
                         <div class="card-header">
@@ -241,43 +226,31 @@
                             </div>
                         </div>
                     </div>
-
-                    <div id="patientProfileCard" class="card mt-20 hidden">
-                        <!-- Filled dynamically -->
-                    </div>
+                    <div id="patientProfileCard" class="card mt-20 hidden"></div>
                 </section>
 
             </div>
         </main>
     </div>
 
-    <!-- Patient Profile Modal -->
+    <!-- Modals -->
     <div id="patientModal" class="modal hidden">
         <div class="modal-content">
             <span class="close-modal" id="closePatientModal">&times;</span>
             <h2 class="modal-title">الملف الطبي الأساسي</h2>
-            <div id="modalPatientInfo" class="profile-grid">
-                <!-- Dynamic Content -->
-            </div>
+            <div id="modalPatientInfo" class="profile-grid"></div>
             <h3 class="mt-20">تاريخ الزيارات (Appointment History)</h3>
             <div class="table-responsive mt-10">
                 <table class="data-table" id="historyTable">
                     <thead>
-                        <tr>
-                            <th>التاريخ</th>
-                            <th>الشكوى</th>
-                            <th>الحالة</th>
-                        </tr>
+                        <tr><th>التاريخ</th><th>الشكوى</th><th>الحالة</th></tr>
                     </thead>
-                    <tbody>
-                        <!-- Dynamic Content -->
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
     </div>
 
-    <!-- Status Change Modal -->
     <div id="statusModal" class="modal hidden">
         <div class="modal-content modal-small">
             <span class="close-modal" id="closeStatusModal">&times;</span>
@@ -300,7 +273,6 @@
         </div>
     </div>
 
-    <!-- Firebase App (Modular) -->
     <script type="module" src="js/app.js"></script>
 </body>
 </html>
