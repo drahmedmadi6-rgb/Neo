@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NEO KIDS - Reception</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;500;700;800&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay hidden">
+        <div class="spinner"></div>
+        <p id="loadingText">جاري التحميل...</p>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="toast hidden"></div>
+
+    <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+            <div class="brand">
+                <h1>NEO KIDS</h1>
+                <p class="doctor-name">د. أحمد ماضي</p>
+                <p class="specialty">Pediatrics & Neonatology</p>
+            </div>
+            <nav class="nav-menu">
+                <a href="#" class="nav-link active" data-target="dashboardSection"><i class="fa-solid fa-chart-pie"></i> لوحة التحكم</a>
+                <a href="#" class="nav-link" data-target="newAppointmentSection"><i class="fa-solid fa-plus-circle"></i> حجز جديد</a>
+                <a href="#" class="nav-link" data-target="todayAppointmentsSection"><i class="fa-solid fa-calendar-day"></i> حجوزات اليوم</a>
+                <a href="#" class="nav-link" data-target="upcomingAppointmentsSection"><i class="fa-solid fa-calendar-alt"></i> المواعيد القادمة</a>
+                <a href="#" class="nav-link" data-target="searchPatientSection"><i class="fa-solid fa-search"></i> البحث عن مريض</a>
+            </nav>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <h2 id="pageTitle">لوحة التحكم</h2>
+                <div class="user-info">
+                    <span class="user-role">Reception Desk</span>
+                    <i class="fa-solid fa-user-circle"></i>
+                </div>
+            </header>
+
+            <div class="content-wrapper">
+                
+                <!-- 1. Dashboard Section -->
+                <section id="dashboardSection" class="page-section active">
+                    <div class="stats-grid">
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fa-solid fa-calendar-check"></i></div>
+                            <div class="stat-info">
+                                <h3>حجوزات اليوم</h3>
+                                <p id="dashTodayCount">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fa-solid fa-hourglass-half"></i></div>
+                            <div class="stat-info">
+                                <h3>في الانتظار الآن</h3>
+                                <p id="dashWaitingCount">0</p>
+                            </div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-icon"><i class="fa-solid fa-calendar-plus"></i></div>
+                            <div class="stat-info">
+                                <h3>المواعيد القادمة</h3>
+                                <p id="dashUpcomingCount">0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="quick-actions">
+                        <h3>إجراءات سريعة</h3>
+                        <div class="actions-grid">
+                            <button class="btn-primary" onclick="document.querySelector('[data-target=\'newAppointmentSection\']').click()">حجز جديد <i class="fa-solid fa-plus"></i></button>
+                            <button class="btn-secondary" onclick="document.querySelector('[data-target=\'searchPatientSection\']').click()">البحث عن مريض <i class="fa-solid fa-search"></i></button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2. New Appointment Section -->
+                <section id="newAppointmentSection" class="page-section hidden">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>البحث لتسجيل الحجز</h3>
+                            <p>أدخل رقم هاتف المريض للتحقق من وجود ملف طبي مسبق</p>
+                        </div>
+                        <div class="card-body">
+                            <div class="search-box">
+                                <input type="tel" id="checkPhoneInput" placeholder="أدخل رقم الهاتف (مثال: 01xxxxxxxxx)">
+                                <button id="btnCheckPhone" class="btn-primary">تحقق <i class="fa-solid fa-magnifying-glass"></i></button>
+                            </div>
+                            <div id="patientSearchResult" class="hidden alert"></div>
+                        </div>
+                    </div>
+
+                    <!-- Appointment Form (Hidden until phone is checked) -->
+                    <div id="appointmentFormContainer" class="card hidden mt-20">
+                        <div class="card-header">
+                            <h3 id="formTitle">بيانات الحجز</h3>
+                        </div>
+                        <div class="card-body">
+                            <form id="newAppointmentForm">
+                                <input type="hidden" id="formPatientId">
+                                <input type="hidden" id="formPatientMRN">
+                                
+                                <!-- Patient Info Fields (Readonly if existing, editable if new) -->
+                                <div class="form-grid">
+                                    <div class="form-group">
+                                        <label>اسم الطفل</label>
+                                        <input type="text" id="formFullName" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>رقم الهاتف</label>
+                                        <input type="tel" id="formPhone" required readonly>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>النوع</label>
+                                        <select id="formGender" required>
+                                            <option value="">اختر...</option>
+                                            <option value="Male">ذكر</option>
+                                            <option value="Female">أنثى</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>تاريخ الميلاد</label>
+                                        <input type="date" id="formDOB" required>
+                                    </div>
+                                </div>
+
+                                <hr class="divider">
+
+                                <!-- Appointment Details -->
+                                <div class="form-grid">
+                                    <div class="form-group full-width">
+                                        <label>نوع الحجز</label>
+                                        <div class="radio-group">
+                                            <label><input type="radio" name="appType" value="Now" checked> المريض حضر الآن (Waiting)</label>
+                                            <label><input type="radio" name="appType" value="Scheduled"> موعد مستقبلي (Scheduled)</label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="form-group date-time-group hidden" id="futureDateTimeGroup">
+                                        <label>تاريخ الموعد</label>
+                                        <input type="date" id="formAppDate">
+                                    </div>
+                                    <div class="form-group date-time-group hidden" id="futureTimeGroup">
+                                        <label>وقت الموعد</label>
+                                        <input type="time" id="formAppTime">
+                                    </div>
+
+                                    <div class="form-group full-width">
+                                        <label>الشكوى الرئيسية (اختياري)</label>
+                                        <input type="text" id="formComplaint" placeholder="أعراض مختصرة...">
+                                    </div>
+                                    <div class="form-group full-width">
+                                        <label>ملاحظات السكرتارية (اختياري)</label>
+                                        <textarea id="formNotes" rows="2" placeholder="أي ملاحظات إضافية..."></textarea>
+                                    </div>
+                                </div>
+
+                                <div class="form-actions">
+                                    <button type="submit" class="btn-primary btn-large">تأكيد الحجز</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3. Today's Appointments Section -->
+                <section id="todayAppointmentsSection" class="page-section hidden">
+                    <div class="card">
+                        <div class="card-header d-flex justify-between align-center">
+                            <h3>قائمة مرضى اليوم</h3>
+                            <button id="btnRefreshToday" class="btn-secondary btn-small"><i class="fa-solid fa-sync"></i> تحديث</button>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table" id="todayTable">
+                                <thead>
+                                    <tr>
+                                        <th>الوقت</th>
+                                        <th>الرقم الطبي</th>
+                                        <th>اسم الطفل</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 4. Upcoming Appointments Section -->
+                <section id="upcomingAppointmentsSection" class="page-section hidden">
+                    <div class="card">
+                        <div class="card-header d-flex justify-between align-center">
+                            <h3>المواعيد المستقبلية المجدولة</h3>
+                            <input type="date" id="filterUpcomingDate" class="filter-input">
+                        </div>
+                        <div class="table-responsive">
+                            <table class="data-table" id="upcomingTable">
+                                <thead>
+                                    <tr>
+                                        <th>التاريخ</th>
+                                        <th>الوقت</th>
+                                        <th>الرقم الطبي</th>
+                                        <th>اسم الطفل</th>
+                                        <th>الحالة</th>
+                                        <th>الإجراءات</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Dynamic rows -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 5. Search Patient Section -->
+                <section id="searchPatientSection" class="page-section hidden">
+                    <div class="card">
+                        <div class="card-header">
+                            <h3>البحث في السجلات الطبية</h3>
+                        </div>
+                        <div class="card-body">
+                            <div class="search-box">
+                                <input type="text" id="globalSearchInput" placeholder="ابحث برقم الهاتف أو الرقم الطبي (NEO-...)">
+                                <button id="btnGlobalSearch" class="btn-primary">بحث <i class="fa-solid fa-search"></i></button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="patientProfileCard" class="card mt-20 hidden">
+                        <!-- Filled dynamically -->
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- Patient Profile Modal -->
+    <div id="patientModal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-modal" id="closePatientModal">&times;</span>
+            <h2 class="modal-title">الملف الطبي الأساسي</h2>
+            <div id="modalPatientInfo" class="profile-grid">
+                <!-- Dynamic Content -->
+            </div>
+            <h3 class="mt-20">تاريخ الزيارات (Appointment History)</h3>
+            <div class="table-responsive mt-10">
+                <table class="data-table" id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>التاريخ</th>
+                            <th>الشكوى</th>
+                            <th>الحالة</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <!-- Dynamic Content -->
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Change Modal -->
+    <div id="statusModal" class="modal hidden">
+        <div class="modal-content modal-small">
+            <span class="close-modal" id="closeStatusModal">&times;</span>
+            <h2 class="modal-title">تحديث حالة الموعد</h2>
+            <form id="statusForm">
+                <input type="hidden" id="statusAppId">
+                <div class="form-group">
+                    <label>الحالة الجديدة</label>
+                    <select id="newStatusSelect" required>
+                        <option value="Waiting">Waiting (في الانتظار)</option>
+                        <option value="In Consultation">In Consultation (عند الطبيب)</option>
+                        <option value="Completed">Completed (اكتمل)</option>
+                        <option value="Cancelled">Cancelled (ملغي)</option>
+                        <option value="No Show">No Show (لم يحضر)</option>
+                        <option value="Scheduled">Scheduled (مجدول)</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn-primary full-width mt-10">تحديث الحالة</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Firebase App (Modular) -->
+    <script type="module" src="js/app.js"></script>
+</body>
+</html>
