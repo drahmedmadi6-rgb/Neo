@@ -273,7 +273,7 @@
         </div>
     </div>
 
-    <!-- السكربت المدمج بالكامل ليعمل مباشرة بدون سيرفر -->
+    <!-- السكربت المدمج بالكامل ليعمل مباشرة -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, query, where, doc, getDoc, updateDoc, runTransaction, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
@@ -291,22 +291,25 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // 2. UI Functions
+        // 2. UI Functions (تم حل المشكلة هنا)
         function showSection(sectionId) {
-            // 1. إخفاء كل الأقسام
+            // نخفي كل الأقسام ونشيل الكلاسات
             document.querySelectorAll('.page-section').forEach(sec => {
                 sec.classList.add('hidden');
-                sec.classList.remove('active'); // السطر ده كان ناقص عشان يقفل الصفحات التانية
+                sec.classList.remove('active');
             });
             document.querySelectorAll('.nav-link').forEach(link => link.classList.remove('active'));
             
-            // 2. إظهار القسم الجديد
+            // نظهر القسم المطلوب ونضيف له كلاس active عشان ملف الـ CSS يقرأه
             const targetSection = document.getElementById(sectionId);
-            targetSection.classList.remove('hidden');
-            targetSection.classList.add('active'); // <--- السطر السحري اللي أنا نسيته وكان مخفي الشاشة!
+            if(targetSection) {
+                targetSection.classList.remove('hidden');
+                targetSection.classList.add('active');
+            }
             
-            document.querySelector(`[data-target="${sectionId}"]`)?.classList.add('active');
-            
+            const activeLink = document.querySelector(`[data-target="${sectionId}"]`);
+            if(activeLink) activeLink.classList.add('active');
+
             const titleMap = {
                 'dashboardSection': 'لوحة التحكم',
                 'newAppointmentSection': 'تسجيل حجز جديد',
@@ -316,7 +319,6 @@
             };
             document.getElementById('pageTitle').innerText = titleMap[sectionId];
         }
-
 
         function showLoading(text = "جاري المعالجة...") {
             document.getElementById('loadingText').innerText = text;
@@ -524,6 +526,8 @@
                     showToast(`تم الحجز! الملف: ${mrn}`);
                     document.getElementById('newAppointmentForm').reset();
                     document.getElementById('appointmentFormContainer').classList.add('hidden');
+                    document.getElementById('patientSearchResult').classList.add('hidden');
+                    document.getElementById('checkPhoneInput').value = '';
                     document.querySelector('[data-target="dashboardSection"]').click();
                 } catch (error) { showToast("خطأ في الحفظ", "error"); }
                 hideLoading();
@@ -611,6 +615,7 @@
             document.getElementById('closePatientModal').addEventListener('click', () => document.getElementById('patientModal').classList.add('hidden'));
             document.getElementById('closeStatusModal').addEventListener('click', () => document.getElementById('statusModal').classList.add('hidden'));
 
+            // تشغيل لوحة التحكم في البداية
             loadDashboard();
         });
     </script>
